@@ -1,14 +1,60 @@
-use std::io;
+use std::{env::args, fs, io};
+
+const FILE: &str = "tasks.txt";
 
 struct Task {
     name: String,
     done: bool,
 }
 
+fn save_tasks(tasks: &[Task]) {
+    let mut content = String::new();
+
+    for task in tasks {
+        let done = if task.done { 1 } else { 0 };
+        content.push_str(&format!("{};{}\n", done, task.name));
+    }
+    fs::write(FILE, content).expect("Error when saving");
+}
+
+fn load_tasks() -> Vec<Task> {
+    let content = match fs::read_to_string(FILE) {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut tasks = Vec::new();
+    for line in content.lines() {
+        if let Some((done, name)) = line.split_once(';') {
+            tasks.push(Task {
+                name: name.to_string(),
+                done: done == "1",
+            })
+        }
+    }
+    tasks
+}
+
+fn delete_all_done(tasks: &mut Vec<Task>) {
+    for i in (0..tasks.len()).rev() {
+        if tasks[i].done == true {
+            tasks.remove(i);
+        }
+    }
+}
+fn delete_task(tasks: &mut Vec<Task>, index: usize) {
+    if index < tasks.len() {
+        tasks.remove(index);
+    } else {
+        println!("This task does not exist");
+    }
+}
+
 fn show_tasks(tasks: &[Task]) {
     for (i, task) in tasks.iter().enumerate() {
-        let status = if task.done == true { "[x]" } else { "[ ]" };
-        println!("{}. {} {}", i, task.name, status);
+        let status = if task.done == true { "[✓]" } else { "[ ]" };
+
+        print!("{}: {} {}\n", i + 1, status, task.name);
     }
 }
 
@@ -19,10 +65,17 @@ fn set_done(tasks: &mut [Task], index: usize) {
     }
 }
 
+fn clear_screen() {
+    clearscreen::clear().expect("failed to clear screen");
+}
+
 fn main() {
-    let mut tasks: Vec<Task> = Vec::new();
+    clear_screen();
+    let mut tasks = load_tasks();
     loop {
-        println!("1. Add task\n2. See tasks\n3. Mark task as done\n4. Leave");
+        println!(
+            "1. Add task\n2. See tasks\n3. Mark task as done\n4. Delete a task\n5. Delete all done\n6. Leave\n"
+        );
         let mut choice: String = String::new();
 
         io::stdin()
@@ -42,8 +95,23 @@ fn main() {
                     done: false,
                 };
                 tasks.push(t);
+                save_tasks(&tasks);
+                clear_screen();
             }
-            "2" => show_tasks(&tasks),
+
+            "2" => {
+                clear_screen();
+                show_tasks(&tasks);
+                print!("\nPress enter to go to the menu\n");
+                let mut buffer = String::new();
+
+                io::stdin()
+                    .read_line(&mut buffer)
+                    .expect("Error when reading the input");
+
+                clear_screen();
+            }
+
             "3" => {
                 show_tasks(&tasks);
                 println!("What do you want to mark as done ?");
@@ -54,12 +122,46 @@ fn main() {
                     .expect("Error when reading the task");
 
                 match index.trim().parse::<usize>() {
-                    Ok(i) => set_done(&mut tasks, i),
+                    Ok(i) => {
+                        set_done(&mut tasks, i - 1);
+                        save_tasks(&tasks);
+                        clear_screen();
+                    }
                     Err(_) => println!("You're not giving a number !"),
                 }
             }
-            "4" => break,
-            _ => println!("Invalide choice"),
+
+            "4" => {
+                show_tasks(&tasks);
+                println!("What do you want to delete ?");
+                let mut index = String::new();
+
+                io::stdin()
+                    .read_line(&mut index)
+                    .expect("Error when reading the task");
+
+                match index.trim().parse::<usize>() {
+                    Ok(i) => {
+                        delete_task(&mut tasks, i - 1);
+                        save_tasks(&tasks);
+                        clear_screen();
+                    }
+                    Err(_) => println!("You're not giving a number !"),
+                }
+            }
+
+            "5" => {
+                delete_all_done(&mut tasks);
+                save_tasks(&tasks);
+                clear_screen();
+            }
+
+            "6" => break,
+
+            _ => {
+                clear_screen();
+                println!("/!\\ Invalide choice /!\\")
+            }
         }
     }
 }
