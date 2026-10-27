@@ -1,4 +1,4 @@
-use std::{env::args, fs, io};
+use std::{fs, io};
 
 const FILE: &str = "tasks.txt";
 
@@ -74,7 +74,7 @@ fn main() {
     let mut tasks = load_tasks();
     loop {
         println!(
-            "1. Add task\n2. See tasks\n3. Mark task as done\n4. Delete a task\n5. Delete all done\n6. Leave\n"
+            "1. Add task\n2. See tasks\n3. Mark task as done\n4. Delete a task\n5. Delete all completed tasks\n6. Leave\n"
         );
         let mut choice: String = String::new();
 
@@ -122,11 +122,12 @@ fn main() {
                     .expect("Error when reading the task");
 
                 match index.trim().parse::<usize>() {
-                    Ok(i) => {
+                    Ok(i) if i > 0 => {
                         set_done(&mut tasks, i - 1);
                         save_tasks(&tasks);
                         clear_screen();
                     }
+                    Ok(_) => println!("This task does not exist"),
                     Err(_) => println!("You're not giving a number !"),
                 }
             }
@@ -141,11 +142,12 @@ fn main() {
                     .expect("Error when reading the task");
 
                 match index.trim().parse::<usize>() {
-                    Ok(i) => {
+                    Ok(i) if i > 0 => {
                         delete_task(&mut tasks, i - 1);
                         save_tasks(&tasks);
                         clear_screen();
                     }
+                    Ok(_) => println!("This task does not exist"),
                     Err(_) => println!("You're not giving a number !"),
                 }
             }
